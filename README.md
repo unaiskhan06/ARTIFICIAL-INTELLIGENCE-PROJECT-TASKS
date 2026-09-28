@@ -1,6 +1,6 @@
 # AI/ML/CNN Project Portfolio
 
-This repository contains 6 tasks completed during the internship, covering
+This repository contains 6 tasks , covering
 email classification, chatbot development, quiz generation, Hugging Face
 models, AutoGen multi-agent systems, and CNN-based face recognition.
 
