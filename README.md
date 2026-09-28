@@ -1,4 +1,4 @@
-# EMATIX INTERNSHIP - AI/ML Project Portfolio
+# AI/ML/CNN Project Portfolio
 
 This repository contains 6 tasks completed during the internship, covering
 email classification, chatbot development, quiz generation, Hugging Face
