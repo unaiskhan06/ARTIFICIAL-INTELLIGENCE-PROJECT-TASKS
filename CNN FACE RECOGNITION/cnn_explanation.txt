@@ -1,0 +1,252 @@
+CNN Face Recognition - Explained Simply
+=========================================
+
+Hey! This document walks you through how our CNN recognizes faces,
+layer by layer, in plain English. Read this before your review so
+you can confidently explain what's happening inside the network.
+
+
+-----------------------------------------------------------------------
+LAYER 1: THE INPUT LAYER (Where it all begins)
+-----------------------------------------------------------------------
+
+Think of this as the front door of the network. The raw face photo
+enters here, but the computer can't "see" an image the way we do.
+It only understands numbers.
+
+So here's what happens: the 64x64 pixel grayscale face image gets
+turned into a grid of numbers. Each number tells us how bright that
+pixel is - 0 means completely black, 1 means completely white, and
+anything in between is a shade of gray.
+
+The shape coming in is (1, 64, 64). That "1" means we have one color
+channel (grayscale). If this were a color photo, we'd have 3 channels
+- one each for red, green, and blue.
+
+The input layer itself doesn't do any math. It just holds the image
+data and passes it along to the next layer.
+
+Think of it like a photographer handing a photo to an analyst - the
+photographer's job is done, now the analyst takes over.
+
+
+-----------------------------------------------------------------------
+LAYER 2: THE CONVOLUTION LAYER (The feature detector)
+-----------------------------------------------------------------------
+
+This is where things get interesting. This layer is the "eyes" of
+the network - it looks at the image and picks out important patterns
+like edges, lines, curves, and textures.
+
+Here's how it works: imagine a small 3x3 window (called a "filter"
+or "kernel") that slides across the entire image, one step at a time.
+At every position, it compares its 3x3 pattern against the pixels
+underneath it. If the pattern matches, it outputs a high number. If
+not, it outputs a low number.
+
+After sliding across the whole image, you get what's called a "feature
+map" - basically a heatmap showing where that particular pattern was
+found.
+
+We use 32 different filters in this layer, so we get 32 feature maps.
+Each filter learns to detect something different during training. The
+cool thing is that early layers learn simple stuff (edges and lines),
+while deeper layers combine those to recognize complex things like
+eyes, noses, and eventually whole face shapes.
+
+We also use "padding" - adding a border of zeros around the image -
+so the output stays the same size as the input.
+
+In numbers: this layer has 32 filters, each with 9 weights (3x3) plus
+1 bias, giving us 320 learnable parameters.
+
+Imagine shining 32 different colored lights on a painting - each light
+reveals different details that you couldn't see with normal light.
+
+
+-----------------------------------------------------------------------
+LAYER 3: THE MAX POOLING LAYER (The compressor)
+-----------------------------------------------------------------------
+
+After convolution, we have a lot of data. Max pooling is a smart way
+to shrink it down while keeping the good stuff.
+
+It's simple: we divide the feature map into little 2x2 blocks and
+keep only the single highest value in each block. The other three
+values get thrown away. This cuts the image size in half in both
+directions - so 64x64 becomes 32x32.
+
+Why do this? Three reasons:
+
+1. It reduces the amount of computation the network has to do later.
+   Smaller images = faster processing.
+
+2. It keeps the strongest features. The maximum value means the
+   pattern was detected most strongly at that spot - that's what we
+   care about.
+
+3. It makes the network robust to small shifts. If a face moves one
+   pixel to the left, the max pooling result barely changes. This
+   is called "translation invariance" and it's really important -
+   real faces aren't perfectly centered every time.
+
+This layer has zero learnable parameters. It's just a fixed operation.
+
+Think of it like summarizing a 4-page document into 1 page by keeping
+only the most important sentence from each paragraph. You lose some
+detail, but the key points survive.
+
+
+-----------------------------------------------------------------------
+LAYER 4: THE FLATTEN LAYER (The bridge)
+-----------------------------------------------------------------------
+
+This is the simplest layer in the whole network, but it plays a
+crucial role. It takes the 2D feature maps and stretches them out
+into a single flat list of numbers.
+
+Before flattening: we have 32 feature maps, each 16x16 pixels.
+That's 32 x 16 x 16 = 8,192 values arranged in a 3D block.
+
+After flattening: we have one long row of 8,192 numbers.
+
+Why is this necessary? Because the convolution and pooling layers
+work with 2D grids (like images), but the dense layers that come
+next only understand 1D lists. Flatten is the bridge between these
+two worlds.
+
+No learnable parameters here either - it's just a reshape.
+
+Picture a spreadsheet with rows and columns. Now imagine reading
+every cell, left to right, top to bottom, and writing all the values
+into a single list. That's flattening.
+
+
+-----------------------------------------------------------------------
+LAYER 5: THE DENSE LAYER (The thinker)
+-----------------------------------------------------------------------
+
+This is where the network actually "thinks" and makes connections.
+It's called a "fully connected" or "dense" layer because every single
+neuron here is connected to every single input value.
+
+We have 128 neurons in this layer, and each one receives all 8,192
+values from the flatten layer. Each connection has a weight - a number
+that says how important that particular input is for that neuron.
+
+Each neuron does a simple calculation: multiply each input by its
+weight, add them all up, add a bias, and then pass it through a ReLU
+activation function (which just means "if the result is negative,
+make it zero").
+
+Why is this layer so important? The convolution layers detect
+individual features - "there's an edge here" or "there's a curve
+there." But the dense layer learns COMBINATIONS of features. It can
+learn things like "if edge detector A fired AND curve detector B
+fired, this is probably person 5's left eye."
+
+The 128 neurons act as a bottleneck - we're compressing 8,192 values
+down to 128. This forces the network to learn a compact, meaningful
+summary of the face rather than just memorizing pixel values.
+
+This layer has the most parameters by far: 8,192 inputs x 128 neurons
++ 128 biases = 1,048,704 learnable parameters. That's over a million
+numbers the network has to figure out during training.
+
+Think of it like a detective looking at all the clues gathered by
+the investigation team (the conv layers) and combining them to narrow
+down the suspect.
+
+
+-----------------------------------------------------------------------
+LAYER 6: THE OUTPUT LAYER (The final decision)
+-----------------------------------------------------------------------
+
+This is the last layer - the one that actually tells us "this is
+person number 5" or "this is person number 23."
+
+It has 40 neurons, one for each person in our dataset. Each neuron
+takes the 128 features from the dense layer and produces a score for
+its person. The higher the score, the more confident the network is
+that the face belongs to that person.
+
+These raw scores get passed through a "softmax" function, which
+converts them into probabilities - nice numbers between 0 and 1 that
+all add up to 100%. The person with the highest probability is our
+final prediction.
+
+During training, we use something called CrossEntropyLoss to measure
+how wrong the prediction was. If the true answer is person 5 but the
+network guessed person 12, the loss is high. The optimizer then
+adjusts all the weights throughout the entire network to reduce that
+error. Over 15 epochs (full passes through the data), the network
+gradually gets better and better.
+
+This layer has 128 inputs x 40 neurons + 40 biases = 5,160 parameters.
+
+Imagine a police line-up with 40 suspects. The CNN looks at the face
+and points at the one it thinks is the best match. That's the output
+layer.
+
+
+-----------------------------------------------------------------------
+THE FULL JOURNEY (How a face travels through the network)
+-----------------------------------------------------------------------
+
+Let's trace a single face image from start to finish:
+
+  1. A 64x64 grayscale face photo enters the network.
+
+  2. CONV LAYER 1 slides 32 filters across it and detects simple
+     patterns like edges and lines. Output: 32 feature maps of 64x64.
+
+  3. ReLU removes all negative values (they're set to zero).
+
+  4. MAX POOL 1 shrinks each map from 64x64 to 32x32, keeping only
+     the strongest signals.
+
+  5. CONV LAYER 2 takes those 32 maps and detects more complex
+     patterns - combinations of edges that form shapes like eyes
+     and noses. Output: 32 maps of 32x32.
+
+  6. ReLU again removes negatives.
+
+  7. MAX POOL 2 shrinks from 32x32 to 16x16.
+
+  8. FLATTEN takes the 32 maps of 16x16 and stretches them into a
+     single list of 8,192 numbers.
+
+  9. DENSE LAYER takes those 8,192 numbers and compresses them into
+     128 meaningful features. This is where the network "reasons"
+     about what it's seeing.
+
+ 10. ReLU and Dropout (randomly turning off 30% of neurons to prevent
+     memorization) are applied.
+
+ 11. OUTPUT LAYER converts those 128 features into 40 scores, one per
+     person. Softmax turns them into percentages.
+
+ 12. The person with the highest percentage is the final prediction.
+
+
+-----------------------------------------------------------------------
+THE NUMBERS (What's inside our model)
+-----------------------------------------------------------------------
+
+  Total learnable parameters: 1,063,432
+
+  Breaking it down:
+  - Conv Layer 1:     320 parameters   (detects edges and lines)
+  - Conv Layer 2:   9,248 parameters   (detects shapes and parts)
+  - Dense Layer: 1,048,704 parameters   (the brain - combines everything)
+  - Output Layer:   5,160 parameters   (makes the final call)
+
+  Training details:
+  - 15 epochs (went through all training data 15 times)
+  - Batch size 32 (processed 32 images at a time)
+  - Adam optimizer with learning rate 0.001
+  - Final test accuracy: 92.5%
+
+  That means out of 80 test faces it had never seen before, the CNN
+  correctly identified about 74 of them. Not bad for a network running
+  on a CPU!
